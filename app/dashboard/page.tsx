@@ -75,7 +75,7 @@ export default function Dashboard() {
     const { data } = await supabase.from('clicks').select('staff_id, date')
     if (!data) return
     const tc: Record<string, number> = {}
-    data.filter(r => r.date === today).forEach((r: { staff_id: string }) => {
+    data.filter((r: { staff_id: string; date: string }) => r.date === today).forEach((r: { staff_id: string; date: string }) => {
       tc[r.staff_id] = (tc[r.staff_id] || 0) + 1
     })
     setTodayCounts(tc)
@@ -102,12 +102,13 @@ export default function Dashboard() {
       const ctx = canvas.getContext('2d')!
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H)
       ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, W, 60)
-      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px Georgia, serif'
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 22px Georgia, serif'
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
       ctx.fillText('SEPHORA', W / 2, 30)
       ctx.fillStyle = '#aaaaaa'; ctx.font = '10px Arial'
-      ctx.fillText('N I S A N T A S I', W / 2, 50)
-      ctx.fillStyle = '#000'; ctx.font = 'bold 20px Arial'
+      ctx.fillText('NISANTASI', W / 2, 50)
+      ctx.fillStyle = '#000000'; ctx.font = 'bold 20px Arial'
       ctx.fillText(s.name, W / 2, 90)
       const img = new Image()
       await new Promise<void>(resolve => {
@@ -116,16 +117,16 @@ export default function Dashboard() {
       })
       const cx = W / 2, cy = 285
       const bw = s.name.length * 13 + 28, bh = 36
-      ctx.fillStyle = '#fff'; ctx.fillRect(cx - bw/2, cy - bh/2, bw, bh)
-      ctx.strokeStyle = '#000'; ctx.lineWidth = 2
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(cx - bw/2, cy - bh/2, bw, bh)
+      ctx.strokeStyle = '#000000'; ctx.lineWidth = 2
       ctx.strokeRect(cx - bw/2, cy - bh/2, bw, bh)
-      ctx.fillStyle = '#000'; ctx.font = 'bold 16px Arial'
+      ctx.fillStyle = '#000000'; ctx.font = 'bold 16px Arial'
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
       ctx.fillText(s.name, cx, cy)
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 468, W, 52)
-      ctx.fillStyle = '#fff'; ctx.font = '11px Arial'
-      ctx.fillText("Google'da yorum birakmak icin tara", W / 2, 484)
-      ctx.fillStyle = '#aaa'; ctx.font = 'bold 10px Arial'
+      ctx.fillStyle = '#000000'; ctx.fillRect(0, 468, W, 52)
+      ctx.fillStyle = '#ffffff'; ctx.font = '11px Arial'
+      ctx.fillText('Google yorum icin tara', W / 2, 484)
+      ctx.fillStyle = '#aaaaaa'; ctx.font = 'bold 10px Arial'
       ctx.fillText('NISANTASI SEPHORA', W / 2, 502)
       urls[s.id] = canvas.toDataURL('image/png')
     }
@@ -135,8 +136,8 @@ export default function Dashboard() {
   async function addStaff() {
     if (!newName.trim()) return
     const id = newName.toLowerCase()
-      .replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s')
-      .replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c')
+      .replace(/\u011f/g,'g').replace(/\u00fc/g,'u').replace(/\u015f/g,'s')
+      .replace(/\u0131/g,'i').replace(/\u00f6/g,'o').replace(/\u00e7/g,'c')
       .replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')
     if (staff.find(s => s.id === id)) { showToast('Bu isim zaten var!'); return }
     const m = { id, name: newName.trim(), emoji: newEmoji, color: '#ffffff' }
@@ -144,11 +145,11 @@ export default function Dashboard() {
     setStaff([...staff, m])
     setNewName('')
     setTab('bugun')
-    showToast(`${newName} eklendi! ✓`)
+    showToast(newName + ' eklendi!')
   }
 
   async function removeStaff(id: string) {
-    if (!confirm('Bu calisani silmek istedigine emin misin?')) return
+    if (!confirm('Silmek istediginize emin misiniz?')) return
     await supabase.from('staff').delete().eq('id', id)
     setStaff(staff.filter(s => s.id !== id))
   }
@@ -156,7 +157,7 @@ export default function Dashboard() {
   function downloadQR(staffId: string, name: string) {
     const a = document.createElement('a')
     a.href = qrUrls[staffId]
-    a.download = `QR_${name}_Sephora.png`
+    a.download = 'QR_' + name + '_Sephora.png'
     a.click()
   }
 
@@ -191,13 +192,14 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
       <div className="bg-black border-b border-[#222]">
         <div className="max-w-5xl mx-auto flex overflow-x-auto">
           {[
-            { id: 'bugun', label: '📊 Bugun' },
-            { id: 'gecmis', label: '📅 Gecmis' },
-            { id: 'qr', label: '📱 QR Kodlar' },
-            { id: 'ekle', label: '➕ Kisi Ekle' },
+            { id: 'bugun', label: 'Bugun' },
+            { id: 'gecmis', label: 'Gecmis' },
+            { id: 'qr', label: 'QR Kodlar' },
+            { id: 'ekle', label: 'Kisi Ekle' },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id as typeof tab)}
               className={`px-5 py-3 text-sm font-bold tracking-wide transition-all border-b-2 whitespace-nowrap ${
@@ -206,7 +208,9 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
       <div className="max-w-5xl mx-auto px-6 pt-6">
+
         {tab === 'bugun' && (
           <div className="space-y-3">
             <p className="text-[#555] text-xs tracking-widest uppercase mb-4">{formatDate(getTodayTurkey())} — Bugunun Siralamas</p>
@@ -216,7 +220,7 @@ export default function Dashboard() {
               const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣']
               return (
                 <div key={s.id} className="rounded-xl p-5 flex items-center gap-4 border border-[#222] hover:border-white transition-colors bg-[#111]">
-                  <div className="text-2xl w-8 text-center">{medals[i] || '⭐'}</div>
+                  <div className="text-2xl w-8 text-center">{medals[i] || s.emoji}</div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-base">{s.name}</span>
@@ -227,16 +231,17 @@ export default function Dashboard() {
                     </div>
                     <p className="text-[10px] text-[#555] mt-1">%{pct.toFixed(1)} pay</p>
                   </div>
-                  <button onClick={() => removeStaff(s.id)} className="text-[#444] hover:text-white text-lg transition-colors ml-2">✕</button>
+                  <button onClick={() => removeStaff(s.id)} className="text-[#444] hover:text-white text-lg transition-colors ml-2">x</button>
                 </div>
               )
             })}
             <div className="mt-4 p-4 bg-[#111] border border-[#222] rounded-xl text-xs text-[#555]">
-              💡 <span className="text-[#888]">Her gun 00:00 Turkiye saatinde sayaclar sifirlanir.</span>
+              Her gun saat 00:00 Turkiye saatinde sayaclar sifirlanir. Gecmis icin Gecmis sekmesine bak.
             </div>
             <p className="text-center text-[#333] text-[10px] tracking-widest mt-8">DESIGNED BY OKAN KODAL</p>
           </div>
         )}
+
         {tab === 'gecmis' && (
           <div className="space-y-4">
             <p className="text-[#555] text-xs tracking-widest uppercase mb-4">Gunluk Gecmis Istatistikler</p>
@@ -247,7 +252,7 @@ export default function Dashboard() {
               return (
                 <div key={date} className={`rounded-xl border ${isToday ? 'border-white' : 'border-[#222]'} bg-[#111] overflow-hidden`}>
                   <div className={`px-5 py-3 flex justify-between items-center ${isToday ? 'bg-white' : 'bg-[#1a1a1a]'}`}>
-                    <span className={`font-bold text-sm ${isToday ? 'text-black' : 'text-white'}`}>{formatDate(date)} {isToday && '— Bugun'}</span>
+                    <span className={`font-bold text-sm ${isToday ? 'text-black' : 'text-white'}`}>{formatDate(date)}{isToday ? ' — Bugun' : ''}</span>
                     <span className={`font-bold text-lg ${isToday ? 'text-black' : 'text-white'}`}>{dayTotal} toplam</span>
                   </div>
                   <div className="p-4 space-y-2">
@@ -270,36 +275,33 @@ export default function Dashboard() {
             })}
           </div>
         )}
+
         {tab === 'qr' && (
-          <div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {staff.map(s => (
-                <div key={s.id} className="bg-white rounded-xl overflow-hidden border-2 border-black shadow-lg">
-                  <div className="bg-black px-3 py-2 text-center">
-                    <p className="text-white text-[10px] tracking-[4px] font-bold">SEPHORA</p>
-                  </div>
-                  <div className="p-3 text-center">
-                    <p className="text-black font-bold text-sm mb-2">{s.name}</p>
-                    {qrUrls[s.id] ? (
-                      <img src={qrUrls[s.id]} alt={`QR ${s.name}`} className="w-full rounded mb-2" />
-                    ) : (
-                      <div className="w-full aspect-square bg-gray-100 rounded mb-2 flex items-center justify-center text-gray-300 text-xs">Yukleniyor...</div>
-                    )}
-                    <button onClick={() => downloadQR(s.id, s.name)} className="w-full text-white text-xs font-bold py-2 rounded mb-2 bg-black hover:bg-[#333] transition-colors">⬇️ Indir</button>
-                    <div className="rounded py-1.5 text-sm font-bold bg-black text-white">{todayCounts[s.id] || 0} bugun</div>
-                  </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {staff.map(s => (
+              <div key={s.id} className="bg-white rounded-xl overflow-hidden border-2 border-black shadow-lg">
+                <div className="bg-black px-3 py-2 text-center">
+                  <p className="text-white text-[10px] tracking-[4px] font-bold">SEPHORA</p>
                 </div>
-              ))}
-            </div>
+                <div className="p-3 text-center">
+                  <p className="text-black font-bold text-sm mb-2">{s.name}</p>
+                  {qrUrls[s.id] ? (
+                    <img src={qrUrls[s.id]} alt={'QR ' + s.name} className="w-full rounded mb-2" />
+                  ) : (
+                    <div className="w-full aspect-square bg-gray-100 rounded mb-2 flex items-center justify-center text-gray-300 text-xs">Yukleniyor...</div>
+                  )}
+                  <button onClick={() => downloadQR(s.id, s.name)} className="w-full text-white text-xs font-bold py-2 rounded mb-2 bg-black hover:bg-[#333] transition-colors">Indir</button>
+                  <div className="rounded py-1.5 text-sm font-bold bg-black text-white">{todayCounts[s.id] || 0} bugun</div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
+
         {tab === 'ekle' && (
           <div className="max-w-md">
             <div className="bg-[#111] border border-[#222] rounded-2xl p-6 space-y-5">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-1 h-6 bg-white rounded" />
-                <h2 className="text-white font-bold text-lg">Yeni Calisan Ekle</h2>
-              </div>
+              <h2 className="text-white font-bold text-lg">Yeni Calisan Ekle</h2>
               <div>
                 <label className="text-xs text-[#555] uppercase tracking-wider mb-2 block">Isim</label>
                 <input value={newName} onChange={e => setNewName(e.target.value)}
@@ -322,16 +324,16 @@ export default function Dashboard() {
                 <div className="rounded-xl p-4 flex items-center gap-3 bg-black border border-[#333]">
                   <span className="text-2xl">{newEmoji}</span>
                   <span className="font-bold text-white">{newName}</span>
-                  <span className="ml-auto text-[10px] text-[#555] tracking-widest">ONIZLEME</span>
                 </div>
               )}
               <button onClick={addStaff} className="w-full py-3 rounded-xl font-bold text-black text-sm bg-white hover:bg-[#ddd] transition-colors">
-                ✅ Ekle ve QR Olustur
+                Ekle ve QR Olustur
               </button>
             </div>
           </div>
         )}
       </div>
+
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 rounded-full font-bold text-sm shadow-xl z-50">{toast}</div>
       )}
