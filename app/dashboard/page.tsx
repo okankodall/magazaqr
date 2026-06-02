@@ -41,6 +41,10 @@ export default function Dashboard() {
   const [toast, setToast] = useState('')
 
   useEffect(() => {
+    if (localStorage.getItem('auth') !== 'true') {
+      window.location.href = '/login'
+      return
+    }
     setBaseUrl(window.location.origin)
     loadAll()
     const interval = setInterval(loadCounts, 30000)
@@ -161,6 +165,11 @@ export default function Dashboard() {
     a.click()
   }
 
+  function logout() {
+    localStorage.removeItem('auth')
+    window.location.href = '/login'
+  }
+
   function showToast(msg: string) {
     setToast(msg); setTimeout(() => setToast(''), 2500)
   }
@@ -186,9 +195,14 @@ export default function Dashboard() {
               <p className="text-white text-sm font-bold tracking-widest">YORUM TAKIP SISTEMI</p>
             </div>
           </div>
-          <div className="bg-white rounded-lg px-4 py-2 text-center">
-            <div className="text-2xl font-bold text-black">{todayTotal}</div>
-            <div className="text-[9px] text-black/60 tracking-[2px] uppercase">Bugun</div>
+          <div className="flex items-center gap-3">
+            <div className="bg-white rounded-lg px-4 py-2 text-center">
+              <div className="text-2xl font-bold text-black">{todayTotal}</div>
+              <div className="text-[9px] text-black/60 tracking-[2px] uppercase">Bugun</div>
+            </div>
+            <button onClick={logout} className="text-[#555] hover:text-white text-xs border border-[#333] hover:border-white rounded-lg px-3 py-2 transition-colors">
+              Cikis
+            </button>
           </div>
         </div>
       </div>
@@ -236,7 +250,7 @@ export default function Dashboard() {
               )
             })}
             <div className="mt-4 p-4 bg-[#111] border border-[#222] rounded-xl text-xs text-[#555]">
-              Her gun saat 00:00 Turkiye saatinde sayaclar sifirlanir. Gecmis icin Gecmis sekmesine bak.
+              Her gun saat 00:00 Turkiye saatinde sayaclar sifirlanir.
             </div>
             <p className="text-center text-[#333] text-[10px] tracking-widest mt-8">DESIGNED BY OKAN KODAL</p>
           </div>
