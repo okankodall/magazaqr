@@ -7,6 +7,7 @@ import QRCode from 'qrcode'
 
 type StaffMember = { id: string; name: string; emoji: string; color: string }
 type DayStats = { date: string; counts: Record<string, number> }
+type Goals = { default_goal: number; staff_goals: Record<string, number> }
 
 const EMOJIS = ['🌟','💎','🔥','⚡','🎯','🌸','🦋','🏆','💫','🎪']
 
@@ -23,6 +24,10 @@ function getTodayTurkey() {
   return turkeyTime.toISOString().split('T')[0]
 }
 
+function getCurrentMonth() {
+  return getTodayTurkey().slice(0, 7)
+}
+
 function formatDate(d: string) {
   const [y, m, day] = d.split('-')
   return `${day}.${m}.${y}`
@@ -31,14 +36,20 @@ function formatDate(d: string) {
 export default function Dashboard() {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [todayCounts, setTodayCounts] = useState<Record<string, number>>({})
+  const [monthCounts, setMonthCounts] = useState<Record<string, number>>({})
   const [dayStats, setDayStats] = useState<DayStats[]>([])
+  const [goals, setGoals] = useState<Goals>({ default_goal: 20, staff_goals: {} })
   const [qrUrls, setQrUrls] = useState<Record<string, string>>({})
-  const [tab, setTab] = useState<'bugun' | 'gecmis' | 'qr' | 'ekle'>('bugun')
+  const [tab, setTab] = useState<'bugun' | 'hedef' | 'gecmis' | 'qr' | 'ekle'>('bugun')
   const [loading, setLoading] = useState(true)
   const [baseUrl, setBaseUrl] = useState('')
   const [newName, setNewName] = useState('')
   const [newEmoji, setNewEmoji] = useState('🌟')
   const [toast, setToast] = useState('')
+  const [editingGoal, setEditingGoal] = useState<string | null>(null)
+  const [editingValue, setEditingValue] = useState('')
+  const [defaultGoalEdit, setDefaultGoalEdit] = useState(false)
+  const [defaultGoalValue, setDefaultGoalValue] = useState('')
 
   useEffect(() => {
     if (localStorage.getItem('auth') !== 'true') {
@@ -59,6 +70,7 @@ export default function Dashboard() {
   async function loadAll() {
     await loadStaff()
     await loadCounts()
+    await loadGoals()
     setLoading(false)
   }
 
@@ -74,15 +86,34 @@ export default function Dashboard() {
     }
   }
 
+  async function loadGoals() {
+    const month = getCurrentMonth()
+    const { data } = await supabase.from('goals').select('*').eq('id', 'monthly').single()
+    if (data) {
+      setGoals({ default_goal: data.default_goal || 20, staff_goals: data.staff_goals || {} })
+    } else {
+      await supabase.from('goals').insert({ id: 'monthly', default_goal: 20, staff_goals: {}, month })
+    }
+  }
+
   async function loadCounts() {
     const today = getTodayTurkey()
+    const month = getCurrentMonth()
     const { data } = await supabase.from('clicks').select('staff_id, date')
     if (!data) return
+
     const tc: Record<string, number> = {}
     data.filter((r: { staff_id: string; date: string }) => r.date === today).forEach((r: { staff_id: string; date: string }) => {
       tc[r.staff_id] = (tc[r.staff_id] || 0) + 1
     })
     setTodayCounts(tc)
+
+    const mc: Record<string, number> = {}
+    data.filter((r: { staff_id: string; date: string }) => r.date && r.date.startsWith(month)).forEach((r: { staff_id: string; date: string }) => {
+      mc[r.staff_id] = (mc[r.staff_id] || 0) + 1
+    })
+    setMonthCounts(mc)
+
     const byDate: Record<string, Record<string, number>> = {}
     data.forEach((r: { staff_id: string; date: string }) => {
       if (!r.date) return
@@ -93,6 +124,31 @@ export default function Dashboard() {
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([date, counts]) => ({ date, counts }))
     setDayStats(stats)
+  }
+
+  function getGoal(staffId: string) {
+    return goals.staff_goals[staffId] || goals.default_goal
+  }
+
+  async function saveDefaultGoal() {
+    const val = parseInt(defaultGoalValue)
+    if (!val || val < 1) return
+    const updated = { ...goals, default_goal: val }
+    setGoals(updated)
+    await supabase.from('goals').upsert({ id: 'monthly', default_goal: val, staff_goals: goals.staff_goals, month: getCurrentMonth() })
+    setDefaultGoalEdit(false)
+    showToast('Hedef guncellendi!')
+  }
+
+  async function saveStaffGoal(staffId: string) {
+    const val = parseInt(editingValue)
+    if (!val || val < 1) return
+    const newStaffGoals = { ...goals.staff_goals, [staffId]: val }
+    const updated = { ...goals, staff_goals: newStaffGoals }
+    setGoals(updated)
+    await supabase.from('goals').upsert({ id: 'monthly', default_goal: goals.default_goal, staff_goals: newStaffGoals, month: getCurrentMonth() })
+    setEditingGoal(null)
+    showToast('Hedef guncellendi!')
   }
 
   async function generateQRCodes(staffList: StaffMember[]) {
@@ -175,7 +231,10 @@ export default function Dashboard() {
   }
 
   const todayTotal = Object.values(todayCounts).reduce((a, b) => a + b, 0)
+  const monthTotal = Object.values(monthCounts).reduce((a, b) => a + b, 0)
+  const totalGoal = staff.reduce((acc, s) => acc + getGoal(s.id), 0)
   const sortedToday = [...staff].sort((a, b) => (todayCounts[b.id] || 0) - (todayCounts[a.id] || 0))
+  const sortedMonth = [...staff].sort((a, b) => (monthCounts[b.id] || 0) - (monthCounts[a.id] || 0))
 
   if (loading) return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
@@ -211,6 +270,7 @@ export default function Dashboard() {
         <div className="max-w-5xl mx-auto flex overflow-x-auto">
           {[
             { id: 'bugun', label: 'Bugun' },
+            { id: 'hedef', label: 'Aylik Hedef' },
             { id: 'gecmis', label: 'Gecmis' },
             { id: 'qr', label: 'QR Kodlar' },
             { id: 'ekle', label: 'Kisi Ekle' },
@@ -253,6 +313,102 @@ export default function Dashboard() {
               Her gun saat 00:00 Turkiye saatinde sayaclar sifirlanir.
             </div>
             <p className="text-center text-[#333] text-[10px] tracking-widest mt-8">DESIGNED BY OKAN KODAL</p>
+          </div>
+        )}
+
+        {tab === 'hedef' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-[#555] text-xs tracking-widest uppercase">{getCurrentMonth().replace('-', '.')} — Aylik Hedef</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-lg px-4 py-2 text-center">
+                <div className="text-xl font-bold text-white">{monthTotal} / {totalGoal}</div>
+                <div className="text-[9px] text-[#555] tracking-widest uppercase">Toplam</div>
+              </div>
+            </div>
+
+            <div className="bg-[#111] rounded-full h-2 overflow-hidden mb-1">
+              <div className="h-full bg-white rounded-full transition-all duration-700"
+                style={{ width: `${Math.min((monthTotal / totalGoal) * 100, 100)}%` }} />
+            </div>
+            <div className="flex justify-between text-[10px] text-[#555] mb-6">
+              <span>%{totalGoal > 0 ? Math.round((monthTotal / totalGoal) * 100) : 0} tamamlandi</span>
+              <span>{Math.max(totalGoal - monthTotal, 0)} kaldi</span>
+            </div>
+
+            {sortedMonth.map((s, i) => {
+              const count = monthCounts[s.id] || 0
+              const goal = getGoal(s.id)
+              const pct = Math.min((count / goal) * 100, 100)
+              const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣']
+              const done = count >= goal
+              return (
+                <div key={s.id} className={`rounded-xl p-5 border bg-[#111] transition-colors ${done ? 'border-white' : 'border-[#222]'}`}>
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{medals[i] || s.emoji}</span>
+                      <span className="font-bold text-base">{s.name}</span>
+                      {done && <span className="text-[10px] bg-white text-black px-2 py-0.5 rounded-full font-bold">HEDEFE ULASTI</span>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl font-bold text-white">{count}</span>
+                      {editingGoal === s.id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={editingValue}
+                            onChange={e => setEditingValue(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && saveStaffGoal(s.id)}
+                            className="w-16 bg-black border border-white rounded px-2 py-1 text-white text-sm outline-none text-center"
+                            autoFocus
+                          />
+                          <button onClick={() => saveStaffGoal(s.id)} className="text-white text-xs border border-white rounded px-2 py-1">Kaydet</button>
+                          <button onClick={() => setEditingGoal(null)} className="text-[#555] text-xs">iptal</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setEditingGoal(s.id); setEditingValue(String(goal)) }}
+                          className="text-[#555] hover:text-white text-[10px] border border-[#333] hover:border-white rounded px-2 py-1 transition-colors">
+                          Hedef: {goal}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-[#222] rounded-full h-2 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700 bg-white" style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className="text-[10px] text-[#555] mt-1">%{Math.round(pct)} — {Math.max(goal - count, 0)} kaldi</p>
+                </div>
+              )
+            })}
+
+            <div className="mt-4 bg-[#111] border border-[#222] rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-white text-sm font-bold">Genel Hedef</p>
+                <p className="text-[#555] text-xs">Ozel hedef belirlenmemis calisanlar icin</p>
+              </div>
+              {defaultGoalEdit ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={defaultGoalValue}
+                    onChange={e => setDefaultGoalValue(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && saveDefaultGoal()}
+                    className="w-16 bg-black border border-white rounded px-2 py-1 text-white text-sm outline-none text-center"
+                    autoFocus
+                  />
+                  <button onClick={saveDefaultGoal} className="text-black bg-white text-xs font-bold rounded px-3 py-1">Kaydet</button>
+                  <button onClick={() => setDefaultGoalEdit(false)} className="text-[#555] text-xs">iptal</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setDefaultGoalEdit(true); setDefaultGoalValue(String(goals.default_goal)) }}
+                  className="bg-white text-black text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#ddd] transition-colors">
+                  Hedef: {goals.default_goal} — Duzenle
+                </button>
+              )}
+            </div>
           </div>
         )}
 
