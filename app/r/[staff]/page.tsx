@@ -1,1 +1,29 @@
-const GOOGLE_REVIEW_URL = 'https://www.google.com/search?q=sephora+n%C4%B1santas%C4%B1+yorumlar&ludocid=3751925013368003471&ibp=gwp;0,7#lkt=LocalPoiReviews&lpg=cid:CgIgAQ%3D%3D'
+import { createClient } from '@supabase/supabase-js'
+import { redirect } from 'next/navigation'
+
+const GOOGLE_REVIEW_URL = 'https://www.google.com/maps?cid=3751925013368003471&action=write-review'
+
+export default async function RedirectPage({
+  params,
+}: {
+  params: Promise<{ staff: string }>
+}) {
+  const { staff: staffId } = await params
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const now = new Date()
+  const turkeyTime = new Date(now.getTime() + 3 * 60 * 60 * 1000)
+  const today = turkeyTime.toISOString().split('T')[0]
+
+  await supabase.from('clicks').insert({
+    staff_id: staffId,
+    clicked_at: now.toISOString(),
+    date: today
+  })
+
+  redirect(GOOGLE_REVIEW_URL)
+}
