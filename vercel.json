@@ -1,0 +1,7 @@
+{
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://iqinjnrixsixhkfjdsyl.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxaW5qbnJpeHNpeGhrZmpkc3lsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjM3MTYsImV4cCI6MjA5NTk5OTcxNn0.L4ftb6UJG1W2bVn0qbgxAgsuZcC_gm_ANIeCOOwj3ZA",
+    "NEXT_PUBLIC_GOOGLE_REVIEW_URL": "https://g.page/r/YOUR_GOOGLE_REVIEW_LINK/review"
+  }
+}
