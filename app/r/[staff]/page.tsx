@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
-import { STAFF } from '@/lib/staff'
 import { redirect } from 'next/navigation'
 
-const GOOGLE_REVIEW_URL = process.env.NEXT_PUBLIC_GOOGLE_REVIEW_URL || 'https://g.page/r/YOUR_LINK/review'
+const GOOGLE_REVIEW_URL = 'https://search.google.com/local/writereview?placeid=ChIJpYkuGwywtBQRj9uzzetDgTQ'
 
 export default async function RedirectPage({
   params,
@@ -11,16 +10,20 @@ export default async function RedirectPage({
 }) {
   const { staff: staffId } = await params
 
-  const validStaff = STAFF.find(s => s.id === staffId)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
-  // Log click to Supabase (server-side)
-  if (validStaff) {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    await supabase.from('clicks').insert({ staff_id: staffId })
-  }
+  const now = new Date()
+  const turkeyTime = new Date(now.getTime() + 3 * 60 * 60 * 1000)
+  const today = turkeyTime.toISOString().split('T')[0]
+
+  await supabase.from('clicks').insert({
+    staff_id: staffId,
+    clicked_at: now.toISOString(),
+    date: today
+  })
 
   redirect(GOOGLE_REVIEW_URL)
 }
