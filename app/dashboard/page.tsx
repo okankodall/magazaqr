@@ -176,4 +176,165 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-16">
-      <div className="bg-black border-b border-white px-6
+      <div className="bg-black border-b border-white px-6 py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <SephoraLogo size={28} />
+            <div className="border-l border-[#333] pl-4">
+              <p className="text-[#888] text-[10px] tracking-[4px] uppercase">Nisantasi</p>
+              <p className="text-white text-sm font-bold tracking-widest">YORUM TAKIP SISTEMI</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg px-4 py-2 text-center">
+            <div className="text-2xl font-bold text-black">{todayTotal}</div>
+            <div className="text-[9px] text-black/60 tracking-[2px] uppercase">Bugun</div>
+          </div>
+        </div>
+      </div>
+      <div className="bg-black border-b border-[#222]">
+        <div className="max-w-5xl mx-auto flex overflow-x-auto">
+          {[
+            { id: 'bugun', label: '📊 Bugun' },
+            { id: 'gecmis', label: '📅 Gecmis' },
+            { id: 'qr', label: '📱 QR Kodlar' },
+            { id: 'ekle', label: '➕ Kisi Ekle' },
+          ].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id as typeof tab)}
+              className={`px-5 py-3 text-sm font-bold tracking-wide transition-all border-b-2 whitespace-nowrap ${
+                tab === t.id ? 'border-white text-white' : 'border-transparent text-[#555] hover:text-white'
+              }`}>{t.label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="max-w-5xl mx-auto px-6 pt-6">
+        {tab === 'bugun' && (
+          <div className="space-y-3">
+            <p className="text-[#555] text-xs tracking-widest uppercase mb-4">{formatDate(getTodayTurkey())} — Bugunun Siralamas</p>
+            {sortedToday.map((s, i) => {
+              const count = todayCounts[s.id] || 0
+              const pct = todayTotal > 0 ? (count / todayTotal) * 100 : 0
+              const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣']
+              return (
+                <div key={s.id} className="rounded-xl p-5 flex items-center gap-4 border border-[#222] hover:border-white transition-colors bg-[#111]">
+                  <div className="text-2xl w-8 text-center">{medals[i] || '⭐'}</div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-base">{s.name}</span>
+                      <span className="text-2xl font-bold text-white">{count}</span>
+                    </div>
+                    <div className="bg-[#222] rounded-full h-1.5 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700 bg-white" style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="text-[10px] text-[#555] mt-1">%{pct.toFixed(1)} pay</p>
+                  </div>
+                  <button onClick={() => removeStaff(s.id)} className="text-[#444] hover:text-white text-lg transition-colors ml-2">✕</button>
+                </div>
+              )
+            })}
+            <div className="mt-4 p-4 bg-[#111] border border-[#222] rounded-xl text-xs text-[#555]">
+              💡 <span className="text-[#888]">Her gun 00:00 Turkiye saatinde sayaclar sifirlanir.</span>
+            </div>
+            <p className="text-center text-[#333] text-[10px] tracking-widest mt-8">DESIGNED BY OKAN KODAL</p>
+          </div>
+        )}
+        {tab === 'gecmis' && (
+          <div className="space-y-4">
+            <p className="text-[#555] text-xs tracking-widest uppercase mb-4">Gunluk Gecmis Istatistikler</p>
+            {dayStats.length === 0 && <div className="text-center text-[#444] py-16">Henuz veri yok</div>}
+            {dayStats.map(({ date, counts }) => {
+              const dayTotal = Object.values(counts).reduce((a, b) => a + b, 0)
+              const isToday = date === getTodayTurkey()
+              return (
+                <div key={date} className={`rounded-xl border ${isToday ? 'border-white' : 'border-[#222]'} bg-[#111] overflow-hidden`}>
+                  <div className={`px-5 py-3 flex justify-between items-center ${isToday ? 'bg-white' : 'bg-[#1a1a1a]'}`}>
+                    <span className={`font-bold text-sm ${isToday ? 'text-black' : 'text-white'}`}>{formatDate(date)} {isToday && '— Bugun'}</span>
+                    <span className={`font-bold text-lg ${isToday ? 'text-black' : 'text-white'}`}>{dayTotal} toplam</span>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    {[...staff].sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0)).map(s => {
+                      const c = counts[s.id] || 0
+                      const pct = dayTotal > 0 ? (c / dayTotal) * 100 : 0
+                      return (
+                        <div key={s.id} className="flex items-center gap-3">
+                          <span className="text-[#888] text-sm w-24 truncate">{s.name}</span>
+                          <div className="flex-1 bg-[#222] rounded-full h-1.5 overflow-hidden">
+                            <div className="h-full bg-white rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-white font-bold text-sm w-6 text-right">{c}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {tab === 'qr' && (
+          <div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {staff.map(s => (
+                <div key={s.id} className="bg-white rounded-xl overflow-hidden border-2 border-black shadow-lg">
+                  <div className="bg-black px-3 py-2 text-center">
+                    <p className="text-white text-[10px] tracking-[4px] font-bold">SEPHORA</p>
+                  </div>
+                  <div className="p-3 text-center">
+                    <p className="text-black font-bold text-sm mb-2">{s.name}</p>
+                    {qrUrls[s.id] ? (
+                      <img src={qrUrls[s.id]} alt={`QR ${s.name}`} className="w-full rounded mb-2" />
+                    ) : (
+                      <div className="w-full aspect-square bg-gray-100 rounded mb-2 flex items-center justify-center text-gray-300 text-xs">Yukleniyor...</div>
+                    )}
+                    <button onClick={() => downloadQR(s.id, s.name)} className="w-full text-white text-xs font-bold py-2 rounded mb-2 bg-black hover:bg-[#333] transition-colors">⬇️ Indir</button>
+                    <div className="rounded py-1.5 text-sm font-bold bg-black text-white">{todayCounts[s.id] || 0} bugun</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {tab === 'ekle' && (
+          <div className="max-w-md">
+            <div className="bg-[#111] border border-[#222] rounded-2xl p-6 space-y-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-1 h-6 bg-white rounded" />
+                <h2 className="text-white font-bold text-lg">Yeni Calisan Ekle</h2>
+              </div>
+              <div>
+                <label className="text-xs text-[#555] uppercase tracking-wider mb-2 block">Isim</label>
+                <input value={newName} onChange={e => setNewName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addStaff()}
+                  placeholder="Calisan adi..."
+                  className="w-full bg-black border border-[#333] rounded-lg px-4 py-3 text-white text-sm outline-none focus:border-white transition-colors" />
+              </div>
+              <div>
+                <label className="text-xs text-[#555] uppercase tracking-wider mb-2 block">Emoji</label>
+                <div className="flex flex-wrap gap-2">
+                  {EMOJIS.map(e => (
+                    <button key={e} onClick={() => setNewEmoji(e)}
+                      className={`text-xl w-10 h-10 rounded-lg transition-all ${newEmoji === e ? 'bg-white/20 ring-2 ring-white' : 'bg-black border border-[#333]'}`}>
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {newName && (
+                <div className="rounded-xl p-4 flex items-center gap-3 bg-black border border-[#333]">
+                  <span className="text-2xl">{newEmoji}</span>
+                  <span className="font-bold text-white">{newName}</span>
+                  <span className="ml-auto text-[10px] text-[#555] tracking-widest">ONIZLEME</span>
+                </div>
+              )}
+              <button onClick={addStaff} className="w-full py-3 rounded-xl font-bold text-black text-sm bg-white hover:bg-[#ddd] transition-colors">
+                ✅ Ekle ve QR Olustur
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 rounded-full font-bold text-sm shadow-xl z-50">{toast}</div>
+      )}
+    </div>
+  )
+}
